@@ -80,13 +80,13 @@ const J_SHAPE: Piece = Piece {
 
 fn main() {
     let mut board = [[Cell::Empty; WIDTH]; HEIGHT];
-    let curr_piece = Piece {
+    let mut curr_piece = Piece {
         shape: O_SHAPE.shape,
         x: 3,
         y: 0,
         p_type: Cell::O,
     };
-    render_game(&mut board, &curr_piece);
+    render_game(&board, &curr_piece);
 }
 
 fn render_board(board: &[[crate::Cell; WIDTH]; HEIGHT]) {
@@ -121,22 +121,51 @@ fn render_piece(piece: &Piece) {
         println!("");
     }
 }
-fn render_game(board: &mut [[Cell; WIDTH]; HEIGHT], piece: &Piece) {
-    let mut h = 0;
-    let mut k = 0;
-    for y in piece.y..piece.y + 4 {
-        for x in piece.x..piece.x + 4 {
-            if piece.shape[h][k] {
-                board[y as usize][x as usize] = piece.p_type;
+fn render_game(board: &[[Cell; WIDTH]; HEIGHT], piece: &Piece) {
+    for y in 0..HEIGHT {
+        for x in 0..WIDTH {
+            let piece_x = x as i32 - piece.x;
+            let piece_y = y as i32 - piece.y;
+            if piece_x >= 0 && piece_x <= 3 && piece_y >= 0 && piece_y <= 3 {
+                if piece.shape[piece_y as usize][piece_x as usize] {
+                    match piece.p_type {
+                        Cell::Empty => print!("."),
+                        Cell::I => print!("I"),
+                        Cell::O => print!("O"),
+                        Cell::T => print!("T"),
+                        Cell::S => print!("S"),
+                        Cell::Z => print!("Z"),
+                        Cell::L => print!("L"),
+                        Cell::J => print!("J"),
+                    }
+                } else {
+                    match board[y][x] {
+                        Cell::Empty => print!("."),
+                        Cell::I => print!("I"),
+                        Cell::O => print!("O"),
+                        Cell::T => print!("T"),
+                        Cell::S => print!("S"),
+                        Cell::Z => print!("Z"),
+                        Cell::L => print!("L"),
+                        Cell::J => print!("J"),
+                    }
+                }
+            } else {
+                match board[y][x] {
+                    Cell::Empty => print!("."),
+                    Cell::I => print!("I"),
+                    Cell::O => print!("O"),
+                    Cell::T => print!("T"),
+                    Cell::S => print!("S"),
+                    Cell::Z => print!("Z"),
+                    Cell::L => print!("L"),
+                    Cell::J => print!("J"),
+                }
             }
-            k += 1;
         }
-        k = 0;
-        h += 1;
+        println!();
     }
-    render_board(board);
 }
-
 #[derive(Clone, Copy)]
 enum Cell {
     Empty,
