@@ -1,9 +1,15 @@
+const WIDTH: usize = 10;
+const HEIGHT: usize = 20;
+
 fn main() {
-    const HEIGHT: usize = 20;
-    const WIDTH: usize = 10;
-    let mut board = [[0; WIDTH]; HEIGHT];
+    let mut board = [[0u8; WIDTH]; HEIGHT];
     board[4][3] = 1;
-    for row in &board {
+    render_board(&board);
+}
+
+fn render_board(board: &[[u8; WIDTH]; HEIGHT]) {
+    println!("+==========+");
+    for row in board {
         print!("|");
         for cell in row {
             match cell {
@@ -14,4 +20,5 @@ fn main() {
         }
         println!("|");
     }
+    println!("+==========+");
 }
