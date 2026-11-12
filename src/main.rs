@@ -1,8 +1,9 @@
 fn main() {
     const HEIGHT: usize = 20;
-    println!("+----------+");
-    for _ in 0..HEIGHT {
-        println!("|..........|");
+    const WIDTH: usize = 10;
+    let mut board = [[0; WIDTH]; HEIGHT];
+    board[4][2] = 1;
+    for line in &board {
+        println!("{:?}", line)
     }
-    println!("+----------+");
 }
