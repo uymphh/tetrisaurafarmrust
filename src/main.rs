@@ -1,5 +1,61 @@
 const WIDTH: usize = 10;
 const HEIGHT: usize = 20;
+const O_SHAPE: Piece = Piece {
+    shape: [
+        [false, false, false, false],
+        [false, true, true, false],
+        [false, true, true, false],
+        [false, false, false, false],
+    ],
+};
+const I_SHAPE: Piece = Piece {
+    shape: [
+        [false, false, false, false],
+        [true, true, true, true],
+        [false, false, false, false],
+        [false, false, false, false],
+    ],
+};
+const T_SHAPE: Piece = Piece {
+    shape: [
+        [false, true, false, false],
+        [true, true, true, false],
+        [false, false, false, false],
+        [false, false, false, false],
+    ],
+};
+const S_SHAPE: Piece = Piece {
+    shape: [
+        [false, false, false, false],
+        [false, true, true, false],
+        [true, true, false, false],
+        [false, false, false, false],
+    ],
+};
+const Z_SHAPE: Piece = Piece {
+    shape: [
+        [false, false, false, false],
+        [true, true, false, false],
+        [false, true, true, false],
+        [false, false, false, false],
+    ],
+};
+const L_SHAPE: Piece = Piece {
+    shape: [
+        [false, false, false, false],
+        [false, false, true, false],
+        [true, true, true, false],
+        [false, false, false, false],
+    ],
+};
+const J_SHAPE: Piece = Piece {
+    shape: [
+        [false, false, false, false],
+        [true, false, false, false],
+        [true, true, true, false],
+        [false, false, false, false],
+    ],
+};
 
 fn main() {
     let mut board = [[Cell::Empty; WIDTH]; HEIGHT];
@@ -38,4 +94,8 @@ enum Cell {
     Z,
     L,
     J,
+}
+
+struct Piece {
+    shape: [[bool; 4]; 4],
 }
