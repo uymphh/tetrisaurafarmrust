@@ -1,4 +1,5 @@
 use rand::seq::SliceRandom;
+use std::time::{Duration, Instant};
 const WIDTH: usize = 10;
 const HEIGHT: usize = 20;
 const O: Piece = Piece {
@@ -94,17 +95,61 @@ fn main() {
         pieces: pieces,
         next_piece_index: 1,
         game_over: false,
+        score: 0,
     };
+    let mut last_tick = Instant::now();
     while !game.game_over {
-        match tick(&mut game) {
-            TickResult::Moved => println!("Moving"),
-            TickResult::Landed => {
-                println!("Landed");
-                next_piece(&mut game);
-            }
-        };
+        if last_tick.elapsed() >= Duration::from_secs_f64(0.2) {
+            render_game(&game);
+            match tick(&mut game) {
+                TickResult::Moved => println!("Moving"),
+                TickResult::Landed => {
+                    println!("Landed");
+                    let lines = clear_lines(&mut game);
+                    match lines {
+                        1 => game.score += 100,
+                        2 => game.score += 300,
+                        3 => game.score += 500,
+                        4 => game.score += 800,
+                        _ => game.score += 0,
+                    };
+                    next_piece(&mut game);
+                }
+            };
+            last_tick = Instant::now();
+        }
     }
     println!("Game Over");
+}
+fn cell_to_char(cell: Cell) -> char {
+    match cell {
+        Cell::Empty => '.',
+        Cell::I => 'I',
+        Cell::O => 'O',
+        Cell::T => 'T',
+        Cell::S => 'S',
+        Cell::Z => 'Z',
+        Cell::L => 'L',
+        Cell::J => 'J',
+    }
+}
+fn render_game(game: &Game) {
+    for y in 0..HEIGHT {
+        for x in 0..WIDTH {
+            let piece_x = x as i32 - game.current_piece.x;
+            let piece_y = y as i32 - game.current_piece.y;
+            if piece_x >= 0 && piece_x <= 3 && piece_y >= 0 && piece_y <= 3 {
+                if game.current_piece.shape[piece_y as usize][piece_x as usize] {
+                    print!("{}", cell_to_char(game.current_piece.p));
+                } else {
+                    print!("{}", cell_to_char(game.board[y][x]));
+                }
+            } else {
+                print!("{}", cell_to_char(game.board[y][x]));
+            }
+        }
+        println!();
+    }
 }
 fn next_piece(game: &mut Game) {
     if game.next_piece_index >= game.pieces.len() {
@@ -136,8 +181,10 @@ fn tick(game: &mut Game) -> TickResult {
         TickResult::Landed
     }
 }
-fn clear_lines(game: &mut Game) {
-    for y in 0..HEIGHT {
+fn clear_lines(game: &mut Game) -> usize {
+    let mut y = 0;
+    let mut l: usize = 0;
+    while y < HEIGHT {
         let mut c = 0;
         for x in 0..WIDTH {
             if game.board[y][x] != Cell::Empty {
@@ -145,9 +192,16 @@ fn clear_lines(game: &mut Game) {
             }
         }
         if c == WIDTH {
-            println!("y:{} can be cleared", y as i32);
+            l += 1;
+            for i in (1..=y).rev() {
+                game.board[i] = game.board[i - 1];
+            }
+            game.board[0] = [Cell::Empty; WIDTH];
+        } else {
+            y += 1;
         }
     }
+    l
 }
 
 fn can_spawn(game: &Game, piece: &Piece) -> bool {
@@ -270,4 +324,5 @@ struct Game {
     pieces: [Piece; 7],
     next_piece_index: usize,
     game_over: bool,
+    score: u32,
 }
