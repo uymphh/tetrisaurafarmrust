@@ -1,11 +1,4 @@
 //pieces.rs
-#[derive(Clone, Copy)]
-pub struct Piece {
-    pub shape: [[bool; 4]; 4],
-    pub x: i32,
-    pub y: i32,
-    pub p: Cell,
-}
 #[derive(PartialEq, Clone, Copy)]
 pub enum Cell {
     Empty,
@@ -17,7 +10,104 @@ pub enum Cell {
     L,
     J,
 }
-pub const PIECES: [Piece; 7] = [I, O, T, S, Z, L, J];
+#[derive(PartialEq, Clone, Copy)]
+pub enum Orientation {
+    Spawn,
+    Left,
+    Reverse,
+    Right,
+}
+
+#[derive(Clone, Copy)]
+pub struct Piece {
+    shape: [[bool; 4]; 4],
+    x: i32,
+    y: i32,
+    cell: Cell,
+    orientation: Orientation,
+}
+impl Piece {
+    pub fn new(
+        shape: [[bool; 4]; 4],
+        x: i32,
+        y: i32,
+        cell: Cell,
+        orientation: Orientation,
+    ) -> Self {
+        Self {
+            shape,
+            x,
+            y,
+            cell,
+            orientation,
+        }
+    }
+    pub fn x(&self) -> i32 {
+        self.x
+    }
+    pub fn y(&self) -> i32 {
+        self.y
+    }
+    pub fn shape(&self) -> [[bool; 4]; 4] {
+        self.shape
+    }
+    pub fn orientation(&self) -> Orientation {
+        self.orientation
+    }
+    pub fn cell(&self) -> Cell {
+        self.cell
+    }
+    pub fn move_by(&mut self, dx: i32, dy: i32) {
+        self.x += dx;
+        self.y += dy;
+    }
+    pub fn set_position(&mut self, x: i32, y: i32) {
+        self.x = x;
+        self.y = y;
+    }
+    pub fn rotate_clockwise(&mut self) {
+        if self.cell != Cell::O {
+            let mut new = [[false; 4]; 4];
+            let m = match self.cell {
+                Cell::I => 4,
+                _ => 3,
+            };
+            for y in 0..m {
+                for x in 0..m {
+                    new[x][m - 1 - y] = self.shape[y][x];
+                }
+            }
+            self.shape = new;
+        }
+        match self.orientation {
+            Orientation::Spawn => self.orientation = Orientation::Right,
+            Orientation::Right => self.orientation = Orientation::Reverse,
+            Orientation::Reverse => self.orientation = Orientation::Left,
+            Orientation::Left => self.orientation = Orientation::Spawn,
+        }
+    }
+    pub fn rotate_counterclockwise(&mut self) {
+        if self.cell != Cell::O {
+            let mut new = [[false; 4]; 4];
+            let m = match self.cell {
+                Cell::I => 4,
+                _ => 3,
+            };
+            for y in 0..m {
+                for x in 0..m {
+                    new[m - 1 - x][y] = self.shape[y][x];
+                }
+            }
+            self.shape = new;
+        }
+        match self.orientation {
+            Orientation::Spawn => self.orientation = Orientation::Left,
+            Orientation::Left => self.orientation = Orientation::Reverse,
+            Orientation::Reverse => self.orientation = Orientation::Right,
+            Orientation::Right => self.orientation = Orientation::Spawn,
+        }
+    }
+}
 
 const O: Piece = Piece {
     shape: [
@@ -28,7 +118,8 @@ const O: Piece = Piece {
     ],
     x: 0,
     y: 0,
-    p: Cell::O,
+    cell: Cell::O,
+    orientation: Orientation::Spawn,
 };
 const I: Piece = Piece {
     shape: [
@@ -39,7 +130,8 @@ const I: Piece = Piece {
     ],
     x: 0,
     y: 0,
-    p: Cell::I,
+    cell: Cell::I,
+    orientation: Orientation::Spawn,
 };
 const T: Piece = Piece {
     shape: [
@@ -50,49 +142,56 @@ const T: Piece = Piece {
     ],
     x: 0,
     y: 0,
-    p: Cell::T,
+    cell: Cell::T,
+    orientation: Orientation::Spawn,
 };
 const S: Piece = Piece {
     shape: [
-        [false, false, false, false],
         [false, true, true, false],
         [true, true, false, false],
+        [false, false, false, false],
         [false, false, false, false],
     ],
     x: 0,
     y: 0,
-    p: Cell::S,
+    cell: Cell::S,
+    orientation: Orientation::Spawn,
 };
 const Z: Piece = Piece {
     shape: [
-        [false, false, false, false],
         [true, true, false, false],
         [false, true, true, false],
         [false, false, false, false],
+        [false, false, false, false],
     ],
     x: 0,
     y: 0,
-    p: Cell::Z,
+    cell: Cell::Z,
+    orientation: Orientation::Spawn,
 };
 const L: Piece = Piece {
     shape: [
-        [false, false, false, false],
         [false, false, true, false],
         [true, true, true, false],
         [false, false, false, false],
+        [false, false, false, false],
     ],
     x: 0,
     y: 0,
-    p: Cell::L,
+    cell: Cell::L,
+    orientation: Orientation::Spawn,
 };
 const J: Piece = Piece {
     shape: [
-        [false, false, false, false],
         [true, false, false, false],
         [true, true, true, false],
+        [false, false, false, false],
         [false, false, false, false],
     ],
     x: 0,
     y: 0,
-    p: Cell::J,
+    cell: Cell::J,
+    orientation: Orientation::Spawn,
 };
+
+pub const PIECES: [Piece; 7] = [I, O, T, S, Z, L, J];
