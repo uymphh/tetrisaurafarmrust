@@ -43,6 +43,7 @@ fn main() -> std::io::Result<()> {
             render_game(&game);
             last_tick = Instant::now();
             println!("Score: {}", game.score());
+            std::thread::sleep(Duration::from_millis(1));
         }
     }
     execute!(stdout(), PopKeyboardEnhancementFlags)?;

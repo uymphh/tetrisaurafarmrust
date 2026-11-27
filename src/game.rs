@@ -3,7 +3,7 @@
 use crate::pieces::{Cell, Orientation, PIECES, Piece};
 use rand::seq::SliceRandom;
 use std::collections::VecDeque;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 //  Constants
 const WIDTH: usize = 10;
@@ -40,13 +40,12 @@ pub struct Game {
 impl Game {
     // Create
     pub fn new() -> Game {
-        let mut piece_queue = PIECES;
-        let mut next_bag = PIECES;
+        let mut piece_queue = VecDeque::from(PIECES);
+        let mut next_bag = VecDeque::from(PIECES);
 
-        piece_queue.shuffle(&mut rand::rng());
-        next_bag.shuffle(&mut rand::rng());
-        let mut piece_queue: VecDeque<Piece> = piece_queue.into();
-        let next_bag: VecDeque<Piece> = next_bag.into();
+        piece_queue.make_contiguous().shuffle(&mut rand::rng());
+        next_bag.make_contiguous().shuffle(&mut rand::rng());
+
         let first_piece = piece_queue.pop_front().expect("Bag is empty");
 
         Game {
@@ -54,7 +53,7 @@ impl Game {
             current_piece: Piece::new(
                 first_piece.shape(),
                 3,
-                0,
+                -1,
                 first_piece.cell(),
                 first_piece.orientation(),
             ),
@@ -71,9 +70,8 @@ impl Game {
 
     // Information
     fn get_template(cell: Cell) -> Piece {
-        PIECES
+        *PIECES
             .iter()
-            .copied()
             .find(|temp| temp.cell() == cell)
             .expect("Piece template not found")
     }
@@ -109,11 +107,12 @@ impl Game {
             };
             let grounded = !self.can_move(&self.current_piece, Direction::Down);
             self.current_piece.move_by(dx, dy);
-            if matches!(direction, Direction::Left | Direction::Right) {
-                if self.lock_reset < 15 && grounded {
-                    self.ground_at = None;
-                    self.lock_reset += 1;
-                }
+            if matches!(direction, Direction::Left | Direction::Right)
+                && self.lock_reset < 15
+                && grounded
+            {
+                self.ground_at = None;
+                self.lock_reset += 1;
             }
             return true;
         }
@@ -148,9 +147,9 @@ impl Game {
 
         let new_orientation = rotated.orientation();
         let kicks = get_kicks(rotated.cell(), old_orientation, new_orientation);
-        self.try_rotation(&mut rotated, kicks);
+        self.try_rotation(rotated, kicks);
     }
-    fn try_rotation(&mut self, rotated: &mut Piece, kicks: &[(i32, i32)]) -> bool {
+    fn try_rotation(&mut self, mut rotated: Piece, kicks: &[(i32, i32)]) -> bool {
         let original_x = rotated.x();
         let original_y = rotated.y();
 
@@ -160,7 +159,7 @@ impl Game {
 
             if self.can_place(&rotated) {
                 let grounded = !self.can_move(&self.current_piece, Direction::Down);
-                self.current_piece = *rotated;
+                self.current_piece = rotated;
                 if self.lock_reset < 15 && grounded {
                     self.ground_at = None;
                     self.lock_reset += 1;
@@ -189,12 +188,10 @@ impl Game {
                 }
                 let board_x = piece.x() + x as i32;
                 let board_y = piece.y() + y as i32;
-                if board_x < 0
-                    || board_x >= WIDTH as i32
-                    || board_y < 0
-                    || board_y >= HEIGHT as i32
-                    || self.board[board_y as usize][board_x as usize] != Cell::Empty
-                {
+                if board_x < 0 || board_x >= WIDTH as i32 || board_y >= HEIGHT as i32 {
+                    return false;
+                }
+                if board_y >= 0 && self.board[board_y as usize][board_x as usize] != Cell::Empty {
                     return false;
                 }
             }
@@ -204,10 +201,10 @@ impl Game {
     fn refill_bag(&mut self) {
         if self.piece_queue.len() < 6 {
             if self.next_bag.is_empty() {
-                let mut next_bag = PIECES;
+                let mut next_bag = VecDeque::from(PIECES);
 
-                next_bag.shuffle(&mut rand::rng());
-                self.next_bag = next_bag.into();
+                next_bag.make_contiguous().shuffle(&mut rand::rng());
+                self.next_bag = next_bag;
             }
             self.piece_queue.append(&mut self.next_bag);
         }
@@ -218,7 +215,7 @@ impl Game {
         self.ground_at = None;
         self.refill_bag();
         let mut piece = self.piece_queue.pop_front().expect("No pieces available");
-        piece.set_position(3, 0);
+        piece.set_position(3, -1);
         if self.can_place(&piece) {
             self.current_piece = piece;
         } else {
@@ -227,11 +224,16 @@ impl Game {
     }
     fn lock_piece(&mut self) {
         for y in 0..4 {
+            let board_y = self.current_piece.y() + y as i32;
             for x in 0..4 {
-                if self.current_piece.shape()[y][x] {
-                    self.board[(self.current_piece.y() + y as i32) as usize]
-                        [(self.current_piece.x() + x as i32) as usize] = self.current_piece.cell();
+                if !self.current_piece.shape()[y][x] {
+                    continue;
                 }
+                let board_x = self.current_piece.x() + x as i32;
+                if board_y < 0 {
+                    continue;
+                }
+                self.board[board_y as usize][board_x as usize] = self.current_piece.cell();
             }
         }
     }
@@ -244,7 +246,7 @@ impl Game {
                 // Get default pieces
                 let curr_template = Self::get_template(self.current_piece.cell());
                 let mut next = piece;
-                next.set_position(3, 0);
+                next.set_position(3, -1);
                 // Save default pieces
                 if self.can_place(&next) {
                     self.current_piece = next;
@@ -303,16 +305,14 @@ impl Game {
             TickResult::Moved => {
                 self.ground_at = None;
             }
-            TickResult::Landed => {
-                if let Some(ground_at) = self.ground_at {
-                    if ground_at.elapsed().as_millis() >= 500 {
-                        self.lock_piece();
-                        self.finish_landing();
-                    }
-                } else {
-                    self.ground_at = Some(Instant::now());
+            TickResult::Landed => match self.ground_at {
+                Some(x) if x.elapsed() >= Duration::from_millis(500) => {
+                    self.lock_piece();
+                    self.finish_landing();
                 }
-            }
+                Some(_) => {}
+                None => self.ground_at = Some(Instant::now()),
+            },
         };
     }
     fn finish_landing(&mut self) {
@@ -331,13 +331,14 @@ impl Game {
 
     // Score
     fn update_score(&mut self, lines: usize) {
-        match lines {
-            1 => self.score += 100,
-            2 => self.score += 300,
-            3 => self.score += 500,
-            4 => self.score += 800,
-            _ => {}
+        let points = match lines {
+            1 => 100,
+            2 => 300,
+            3 => 500,
+            4 => 800,
+            _ => 0,
         };
+        self.score += points;
     }
 }
 fn get_kicks(cell: Cell, old: Orientation, new: Orientation) -> &'static [(i32, i32)] {
